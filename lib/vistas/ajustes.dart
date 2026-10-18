@@ -1,78 +1,97 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-// Usa StatefulWidget porque la pantalla cambia de estado al prender/apagar el switch
-class AjustesPantalla extends StatefulWidget {
-  const AjustesPantalla({super.key});
+class AjustesView extends StatefulWidget {
+  const AjustesView({super.key});
 
   @override
-  State<AjustesPantalla> createState() => _AjustesPantallaState();
+  State<AjustesView> createState() => _AjustesViewState();
 }
 
-class _AjustesPantallaState extends State<AjustesPantalla> {
-  bool sonidoActivado = true; // Por defecto el sonido viene activado
-
-  @override
-  void initState() {
-    super.initState();
-    _cargarAjustes(); // Carga las preferencias penas entra a la pantalla
-  }
-
-  // Busca en la memoria del teléfono si el usuario había apagado el sonido
-  Future<void> _cargarAjustes() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      sonidoActivado = prefs.getBool('sonido') ?? true;
-    });
-  }
-
-  // Guarda la opción en la memoria local cuando el usuario toca el interruptor
-  Future<void> _guardarAjustes() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('sonido', sonidoActivado);
-  }
+class _AjustesViewState extends State<AjustesView> {
+  double _volumen = 0.8; // Valor del volumen entre 0.0 y 1.0
+  bool _sonidoActivado = true;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black, // Fondo totalmente negro
       appBar: AppBar(
-        title: const Text('Ajustes', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.purpleAccent,
+        title: const Text('Ajustes'),
+        backgroundColor: Colors.black,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF2C003E), Color(0xFF0F0C29)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        padding: const EdgeInsets.all(20.0),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Tarjetita transparente con el switch para prender/apagar sonido
-            Card(
-              color: Colors.white.withOpacity(0.1),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              child: SwitchListTile(
-                title: const Text(
-                  'Efectos de Sonido',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                subtitle: const Text(
-                  'Activar sonidos al deslizar fichas',
-                  style: TextStyle(color: Colors.white70),
-                ),
-                activeColor: Colors.cyanAccent,
-                value: sonidoActivado,
-                onChanged: (valor) {
-                  setState(() {
-                    sonidoActivado = valor; // Actualiza el switch en pantalla
-                  });
-                  _guardarAjustes(); // Guarda la preferencia en memoria
-                },
+            const Text(
+              'SONIDO',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
               ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Switch de Activar/Desactivar Sonido
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              activeColor: const Color(0xFFFF7675), // Mismo rosado neón de tu menú
+              title: const Text(
+                'Efectos de sonido',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              subtitle: Text(
+                _sonidoActivado ? 'Activado' : 'Silenciado',
+                style: const TextStyle(color: Colors.white54, fontSize: 13),
+              ),
+              value: _sonidoActivado,
+              onChanged: (bool value) {
+                setState(() {
+                  _sonidoActivado = value;
+                });
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // Slider para ajustar/subir/bajar volumen
+            Row(
+              children: [
+                Icon(
+                  _volumen == 0 || !_sonidoActivado
+                      ? Icons.volume_off
+                      : Icons.volume_down,
+                  color: Colors.white70,
+                ),
+                Expanded(
+                  child: Slider(
+                    value: _sonidoActivado ? _volumen : 0.0,
+                    activeColor: const Color(0xFFFF7675),
+                    inactiveColor: Colors.white24,
+                    min: 0.0,
+                    max: 1.0,
+                    onChanged: _sonidoActivado
+                        ? (double value) {
+                            setState(() {
+                              _volumen = value;
+                            });
+                          }
+                        : null,
+                  ),
+                ),
+                Icon(
+                  Icons.volume_up,
+                  color: _sonidoActivado ? Colors.white70 : Colors.white24,
+                ),
+              ],
             ),
           ],
         ),

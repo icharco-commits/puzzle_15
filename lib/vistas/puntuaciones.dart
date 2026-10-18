@@ -1,81 +1,100 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../servicios/almacenamiento.dart';
 
-class PuntuacionesPantalla extends StatefulWidget {
-  const PuntuacionesPantalla({super.key});
+class PuntuacionesView extends StatefulWidget {
+  const PuntuacionesView({super.key});
 
   @override
-  State<PuntuacionesPantalla> createState() => _PuntuacionesPantallaState();
+  State<PuntuacionesView> createState() => _PuntuacionesViewState();
 }
 
-class _PuntuacionesPantallaState extends State<PuntuacionesPantalla> {
-  List<String> listaPuntuaciones = []; // Aquí se van a guardar los tiempos/récords
-
-  @override
-  void initState() {
-    super.initState();
-    _cargarPuntuaciones(); // Lee las puntuaciones guardadas apenas abre la vista
-  }
-
-  // Lee la lista guardada en la memoria local con clave 'mejores_tiempos'
-  Future<void> _cargarPuntuaciones() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      listaPuntuaciones = prefs.getStringList('mejores_tiempos') ?? [];
-    });
-  }
+class _PuntuacionesViewState extends State<PuntuacionesView> {
+  String _dificultadFiltro = 'medio';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tabla de Puntuaciones', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.amber,
-        foregroundColor: Colors.black,
+        title: const Text('Mejores Puntuaciones'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Borrar historial',
+            onPressed: () async {
+              await Almacenamiento.borrarPuntajes();
+              setState(() {});
+            },
+          )
+        ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF0F0C29), Color(0xFF24243E)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        padding: const EdgeInsets.all(16.0),
-        // Si no hay partidas jugadas muestra un texto simple, si no, genera la lista
-        child: listaPuntuaciones.isEmpty
-            ? const Center(
-                child: Text(
-                  '¡Aún no hay puntuaciones registradas!\nJuega una partida para guardar tu récord.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 18),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ChoiceChip(
+                  label: const Text('Fácil'),
+                  selected: _dificultadFiltro == 'facil',
+                  onSelected: (_) => setState(() => _dificultadFiltro = 'facil'),
                 ),
-              )
-            : ListView.builder(
-                itemCount: listaPuntuaciones.length,
-                itemBuilder: (context, index) {
-                  return Card(
-                    color: Colors.white.withOpacity(0.15),
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      // Muestra la posición (1, 2, 3...) dentro de un circulito dorado
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.amberAccent,
-                        child: Text(
-                          '${index + 1}',
-                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('Medio'),
+                  selected: _dificultadFiltro == 'medio',
+                  onSelected: (_) => setState(() => _dificultadFiltro = 'medio'),
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('Difícil'),
+                  selected: _dificultadFiltro == 'dificil',
+                  onSelected: (_) => setState(() => _dificultadFiltro = 'dificil'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<EntradaPuntaje>>(
+              future: Almacenamiento.obtenerPuntajes(_dificultadFiltro),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Text('No hay marcas registradas en esta dificultad.'),
+                  );
+                }
+
+                final lista = snapshot.data!;
+                return ListView.builder(
+                  itemCount: lista.length,
+                  itemBuilder: (context, index) {
+                    final p = lista[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          child: Text('${index + 1}'),
+                        ),
+                        title: Text('Movimientos: ${p.movimientos}'),
+                        subtitle: Text('Tiempo: ${p.tiempoSegundos} s'),
+                        trailing: Text(
+                          p.fecha,
+                          style: const TextStyle(fontSize: 12),
                         ),
                       ),
-                      title: Text(
-                        listaPuntuaciones[index],
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      trailing: const Icon(Icons.emoji_events, color: Colors.amber), // Iconito de trofeo
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
