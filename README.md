@@ -1,17 +1,9 @@
-# puzzle_15
+# 15 Puzzle
 
-A new Flutter project.
+Juego de rompecabezas deslizante desarrollado en Flutter.
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Características
+* Tableros de 3x3, 4x4 y 5x5.
+* Contador de tiempo y movimientos.
+* Registro de mejores puntuaciones.
+* Interfaz con tema oscuro y colores neón.
