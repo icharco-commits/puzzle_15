@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../servicios/servicio_audio.dart';
 
 class AjustesView extends StatefulWidget {
   const AjustesView({super.key});
@@ -8,92 +9,146 @@ class AjustesView extends StatefulWidget {
 }
 
 class _AjustesViewState extends State<AjustesView> {
-  double _volumen = 0.8; // Valor del volumen entre 0.0 y 1.0
-  bool _sonidoActivado = true;
+  bool _sonidoActivado = ServicioAudio.sonidoActivado;
+  double _volumen = ServicioAudio.volumen;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black, // Fondo totalmente negro
-      appBar: AppBar(
-        title: const Text('Ajustes'),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        elevation: 0,
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFF3B2874),
+            Color(0xFF6C5CE7),
+            Color(0xFF2A1B54),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'SONIDO',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-              ),
-            ),
-            const SizedBox(height: 20),
-            
-            // Switch de Activar/Desactivar Sonido
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              activeColor: const Color(0xFFFF7675), // Mismo rosado neón de tu menú
-              title: const Text(
-                'Efectos de sonido',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              subtitle: Text(
-                _sonidoActivado ? 'Activado' : 'Silenciado',
-                style: const TextStyle(color: Colors.white54, fontSize: 13),
-              ),
-              value: _sonidoActivado,
-              onChanged: (bool value) {
-                setState(() {
-                  _sonidoActivado = value;
-                });
-              },
-            ),
-            const SizedBox(height: 20),
-
-            // Slider para ajustar/subir/bajar volumen
-            Row(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: const Text(
+            'Ajustes',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          iconTheme: const IconThemeData(color: Colors.white),
+        ),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
               children: [
-                Icon(
-                  _volumen == 0 || !_sonidoActivado
-                      ? Icons.volume_off
-                      : Icons.volume_down,
-                  color: Colors.white70,
-                ),
-                Expanded(
-                  child: Slider(
-                    value: _sonidoActivado ? _volumen : 0.0,
-                    activeColor: const Color(0xFFFF7675),
-                    inactiveColor: Colors.white24,
-                    min: 0.0,
-                    max: 1.0,
-                    onChanged: _sonidoActivado
-                        ? (double value) {
-                            setState(() {
-                              _volumen = value;
-                            });
-                          }
-                        : null,
+                const Padding(
+                  padding: EdgeInsets.only(left: 4, bottom: 10),
+                  child: Text(
+                    'SONIDO',
+                    style: TextStyle(
+                      color: Color(0xFFFF7675),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                 ),
-                Icon(
-                  Icons.volume_up,
-                  color: _sonidoActivado ? Colors.white70 : Colors.white24,
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Material(
+                        color: Colors.transparent,
+                        child: SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: const Color(0xFF55EFC4),
+                          activeTrackColor: const Color(0xFF55EFC4).withOpacity(0.35),
+                          inactiveThumbColor: Colors.white54,
+                          inactiveTrackColor: Colors.white12,
+                          title: const Text(
+                            'Efectos de sonido y música',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          subtitle: Text(
+                            _sonidoActivado ? 'Activado' : 'Desactivado',
+                            style: TextStyle(
+                              color: _sonidoActivado ? const Color(0xFF55EFC4) : Colors.white38,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          value: _sonidoActivado,
+                          onChanged: (val) {
+                            setState(() {
+                              _sonidoActivado = val;
+                              ServicioAudio.actualizarAjustes(
+                                activado: _sonidoActivado,
+                                nuevoVolumen: _volumen,
+                              );
+                            });
+                          },
+                        ),
+                      ),
+                      if (_sonidoActivado) ...[
+                        const Divider(color: Colors.white12, height: 28),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.volume_down_rounded,
+                              color: Colors.white70,
+                              size: 22,
+                            ),
+                            Expanded(
+                              child: SliderTheme(
+                                data: SliderThemeData(
+                                  activeTrackColor: const Color(0xFFFF7675),
+                                  inactiveTrackColor: Colors.white24,
+                                  thumbColor: const Color(0xFFFF7675),
+                                  overlayColor: const Color(0xFFFF7675).withOpacity(0.2),
+                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 9),
+                                ),
+                                child: Slider(
+                                  value: _volumen,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _volumen = val;
+                                      ServicioAudio.actualizarAjustes(
+                                        activado: _sonidoActivado,
+                                        nuevoVolumen: _volumen,
+                                      );
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                            const Icon(
+                              Icons.volume_up_rounded,
+                              color: Color(0xFFFF7675),
+                              size: 22,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

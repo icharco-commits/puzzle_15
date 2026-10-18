@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'vistas/menu_principal.dart';
+import 'servicios/servicio_audio.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  ServicioAudio.iniciarMusicaFondo();
   runApp(const MiAppPuzzle());
 }
 

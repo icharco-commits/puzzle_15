@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../modelos/tablero.dart';
 import '../servicios/almacenamiento.dart';
+import '../servicios/servicio_audio.dart';
 
 class VistaJuego extends StatefulWidget {
   const VistaJuego({super.key});
@@ -16,31 +17,42 @@ class _VistaJuegoState extends State<VistaJuego> {
   Timer? _timer;
   String _dificultadSeleccionada = 'medio';
   bool _enJuego = false;
+  int _limiteMovimientos = 500;
+  bool _primerMovimientoHecho = false;
 
   void _iniciarPartida(String dificultad) {
     int filas = 4;
     int columnas = 4;
+    int limite = 500;
 
     if (dificultad == 'facil') {
       filas = 3;
       columnas = 3;
+      limite = 300;
+    } else if (dificultad == 'medio') {
+      filas = 4;
+      columnas = 4;
+      limite = 500;
     } else if (dificultad == 'dificil') {
       filas = 5;
       columnas = 5;
+      limite = 700;
     }
+
+    _timer?.cancel();
 
     setState(() {
       _dificultadSeleccionada = dificultad;
+      _limiteMovimientos = limite;
       _tablero = Tablero(filas: filas, columnas: columnas);
+      _segundos = 0;
+      _primerMovimientoHecho = false;
       _enJuego = true;
     });
-
-    _reiniciarCronometro();
   }
 
-  void _reiniciarCronometro() {
+  void _iniciarCronometro() {
     _timer?.cancel();
-    _segundos = 0;
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (mounted) {
         setState(() => _segundos++);
@@ -57,154 +69,342 @@ class _VistaJuegoState extends State<VistaJuego> {
   void _onFichaTap(int index) async {
     bool movido = _tablero.moverFicha(index);
     if (movido) {
+      // Activa el cronómetro solo con el primer movimiento exitoso
+      if (!_primerMovimientoHecho) {
+        _primerMovimientoHecho = true;
+        _iniciarCronometro();
+      }
+
+      // Reproducir sonido al mover ficha
+      ServicioAudio.reproducirMoverFicha();
+
       setState(() {});
+
+      // Verificar Victoria
       if (_tablero.verificarVictoria()) {
         _timer?.cancel();
-        
-        final nuevoPuntaje = EntradaPuntaje(
-          tiempoSegundos: _segundos,
-          movimientos: _tablero.contadorMovimientos,
-          fecha: DateTime.now().toString().split(' ')[0],
-        );
-        await Almacenamiento.guardarPuntaje(_dificultadSeleccionada, nuevoPuntaje);
+        ServicioAudio.reproducirVictoria();
+
+        try {
+          final nuevoPuntaje = EntradaPuntaje(
+            tiempoSegundos: _segundos,
+            movimientos: _tablero.contadorMovimientos,
+            fecha: DateTime.now().toString().split(' ')[0],
+          );
+          await Almacenamiento.guardarPuntaje(_dificultadSeleccionada, nuevoPuntaje);
+        } catch (_) {}
 
         if (!mounted) return;
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: const Text('¡Felicidades! 🎉'),
-            content: Text(
-              '¡Completaste el puzzle!\n\n'
-              'Movimientos: ${_tablero.contadorMovimientos}\n'
-              'Tiempo: $_segundos segundos',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  setState(() {
-                    _enJuego = false; // Vuelve a la pantalla de selección de cuadros
-                  });
-                },
-                child: const Text('Elegir otra dificultad'),
-              ),
-            ],
-          ),
-        );
+        _mostrarPantallaVictoria();
+      } 
+      // Verificar Derrota por exceder límite de movimientos
+      else if (_tablero.contadorMovimientos >= _limiteMovimientos) {
+        _timer?.cancel();
+        _mostrarPantallaDerrota();
       }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Si aún no ha elegido dificultad, mostramos tus cuadritos de selección originales
-    if (!_enJuego) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Seleccionar Dificultad')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _cuadritoDificultad(
-                  titulo: 'Fácil (3x3)',
-                  color: Colors.green,
-                  onTap: () => _iniciarPartida('facil'),
-                ),
-                const SizedBox(height: 16),
-                _cuadritoDificultad(
-                  titulo: 'Medio (4x4)',
-                  color: Colors.blueAccent,
-                  onTap: () => _iniciarPartida('medio'),
-                ),
-                const SizedBox(height: 16),
-                _cuadritoDificultad(
-                  titulo: 'Difícil (5x5)',
-                  color: Colors.redAccent,
-                  onTap: () => _iniciarPartida('dificil'),
-                ),
-              ],
-            ),
-          ),
+  // 🏆 Pantalla de Victoria
+  void _mostrarPantallaVictoria() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF2A1B54),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFFFFEAA7), width: 2),
         ),
-      );
-    }
-
-    // Pantalla activa del tablero de juego
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Puzzle (${_dificultadSeleccionada.toUpperCase()})'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            _timer?.cancel();
-            setState(() => _enJuego = false);
-          },
+        title: const Text(
+          '¡Felicidades! 🎉',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
+        content: Text(
+          '¡Completaste el puzzle!\n\n'
+          'Movimientos: ${_tablero.contadorMovimientos} / $_limiteMovimientos\n'
+          'Tiempo: $_segundos segundos',
+          style: const TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF7675),
+              foregroundColor: const Color(0xFF1E272C),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             onPressed: () {
-              setState(() {
-                _tablero.reiniciarTablero();
-                _reiniciarCronometro();
-              });
+              Navigator.pop(ctx);
+              Navigator.pop(context);
             },
-          )
+            child: const Text('Menú Principal', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF55EFC4),
+              foregroundColor: const Color(0xFF1E272C),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _iniciarPartida(_dificultadSeleccionada);
+            },
+            child: const Text('Reiniciar nivel', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              Text(
-                'Movimientos: ${_tablero.contadorMovimientos}',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    );
+  }
+
+  // 💀 Pantalla de Derrota
+  void _mostrarPantallaDerrota() {
+    _timer?.cancel();
+    ServicioAudio.reproducirDerrota();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF2A1B54),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFFFFEAA7), width: 2),
+        ),
+        title: const Text(
+          'Derrota',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Alcanzaste el límite máximo de movimientos.\n\n'
+          'Movimientos: ${_tablero.contadorMovimientos} / $_limiteMovimientos\n'
+          'Tiempo transcurrido: $_segundos segundos',
+          style: const TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF7675),
+              foregroundColor: const Color(0xFF1E272C),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              Text(
-                'Tiempo: ${_segundos}s',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            child: const Text('Menú Principal', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF55EFC4),
+              foregroundColor: const Color(0xFF1E272C),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _iniciarPartida(_dificultadSeleccionada);
+            },
+            child: const Text('Reiniciar nivel', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFF3B2874),
+            Color(0xFF6C5CE7),
+            Color(0xFF2A1B54),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+          title: Text(
+            !_enJuego ? 'Seleccionar Dificultad' : 'Puzzle (${_dificultadSeleccionada.toUpperCase()})',
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          leading: _enJuego
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    _timer?.cancel();
+                    setState(() => _enJuego = false);
+                  },
+                )
+              : null,
+          actions: _enJuego
+              ? [
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Reiniciar',
+                    onPressed: () {
+                      _iniciarPartida(_dificultadSeleccionada);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.flag_outlined),
+                    tooltip: 'Rendirse',
+                    onPressed: _mostrarPantallaDerrota,
+                  )
+                ]
+              : null,
+        ),
+        body: !_enJuego ? _buildSeleccionDificultad() : _buildTableroJuego(),
+      ),
+    );
+  }
+
+  Widget _buildSeleccionDificultad() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _cuadritoDificultad(
+                titulo: 'Fácil (3x3) - Máx. 300 mov.',
+                color: const Color(0xFF55EFC4),
+                onTap: () => _iniciarPartida('facil'),
+              ),
+              const SizedBox(height: 16),
+              _cuadritoDificultad(
+                titulo: 'Medio (4x4) - Máx. 500 mov.',
+                color: const Color(0xFFFFEAA7),
+                onTap: () => _iniciarPartida('medio'),
+              ),
+              const SizedBox(height: 16),
+              _cuadritoDificultad(
+                titulo: 'Difícil (5x5) - Máx. 700 mov.',
+                color: const Color(0xFFFF7675),
+                onTap: () => _iniciarPartida('dificil'),
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          Expanded(
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTableroJuego() {
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildStatCard('Movimientos', '${_tablero.contadorMovimientos} / $_limiteMovimientos', Icons.touch_app_rounded),
+            const SizedBox(width: 16),
+            _buildStatCard('Tiempo', '${_segundos}s', Icons.timer_rounded),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: Center(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: _tablero.columnas,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 450,
+                  maxHeight: 450,
                 ),
-                itemCount: _tablero.totalFichas,
-                itemBuilder: (context, index) {
-                  int numero = _tablero.fichas[index];
-                  if (numero == 0) {
-                    return const SizedBox.shrink();
-                  }
-                  return ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                child: AspectRatio(
+                  aspectRatio: 1.0,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.15),
+                        width: 1.5,
                       ),
                     ),
-                    onPressed: () => _onFichaTap(index),
-                    child: Text(
-                      '$numero',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                    child: GridView.builder(
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: _tablero.columnas,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
                       ),
+                      itemCount: _tablero.totalFichas,
+                      itemBuilder: (context, index) {
+                        int numero = _tablero.fichas[index];
+                        if (numero == 0) {
+                          return const SizedBox.shrink();
+                        }
+                        return ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFFEAA7),
+                            foregroundColor: const Color(0xFF1E272C),
+                            elevation: 4,
+                            shadowColor: Colors.black38,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () => _onFichaTap(index),
+                          child: Text(
+                            '$numero',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String titulo, String valor, IconData icono) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(icono, color: const Color(0xFF55EFC4), size: 20),
+          const SizedBox(width: 8),
+          Text(
+            '$titulo: ',
+            style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w500),
+          ),
+          Text(
+            valor,
+            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -214,14 +414,14 @@ class _VistaJuegoState extends State<VistaJuego> {
   Widget _cuadritoDificultad({required String titulo, required Color color, required VoidCallback onTap}) {
     return SizedBox(
       width: double.infinity,
-      height: 65,
+      height: 58,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: color.withOpacity(0.2),
           foregroundColor: Colors.white,
           side: BorderSide(color: color, width: 2),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
         onPressed: onTap,

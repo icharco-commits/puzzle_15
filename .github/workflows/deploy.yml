@@ -1,0 +1,36 @@
+name: Despliegue a GitHub Pages
+
+on:
+  push:
+    branches:
+      - main 
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar y configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar paquetes
+        run: flutter pub get
+
+      
+      - name: Compilar versión Web (PWA)
+        run: flutter build web --release --base-href "/puzzle_15/"
+
+      - name: Publicar en GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
