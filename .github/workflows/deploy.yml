@@ -25,9 +25,8 @@ jobs:
       - name: Instalar paquetes
         run: flutter pub get
 
-      
       - name: Compilar versión Web (PWA)
-        run: flutter build web --release --base-href "/puzzle_15/"
+        run: flutter build web --release --pwa-strategy offline-first --base-href "/puzzle_15/"
 
       - name: Publicar en GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
