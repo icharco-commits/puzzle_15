@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../modelos/tablero.dart';
 import '../servicios/almacenamiento.dart';
 import '../servicios/servicio_audio.dart';
+import '../servicios/tema_helper.dart';
+import 'ajustes.dart';
 
 class VistaJuego extends StatefulWidget {
   const VistaJuego({super.key});
@@ -66,26 +68,43 @@ class _VistaJuegoState extends State<VistaJuego> {
     super.dispose();
   }
 
+  Color _obtenerColorPieza(int numero) {
+    if (AjustesView.estiloPiezasNotifier.value == 'Colorido') {
+      final coloresNeon = [
+        const Color(0xFF55EFC4),
+        const Color(0xFFFFEAA7),
+        const Color(0xFFFF7675),
+        const Color(0xFF74B9FF),
+        const Color(0xFFA29BFE),
+        const Color(0xFFFD79A8),
+      ];
+      return coloresNeon[numero % coloresNeon.length];
+    }
+    return const Color(0xFFFFEAA7);
+  }
+
   void _onFichaTap(int index) async {
     bool movido = _tablero.moverFicha(index);
     if (movido) {
-      // Activa el cronómetro solo con el primer movimiento exitoso
       if (!_primerMovimientoHecho) {
         _primerMovimientoHecho = true;
         _iniciarCronometro();
       }
 
-      // Reproducir sonido al mover ficha
       ServicioAudio.reproducirMoverFicha();
-
       setState(() {});
 
-      // Verificar Victoria
       if (_tablero.verificarVictoria()) {
         _timer?.cancel();
         ServicioAudio.reproducirVictoria();
 
+        bool esNuevoRecord = false;
         try {
+          final marcasAnteriores = await Almacenamiento.obtenerPuntajes(_dificultadSeleccionada);
+          if (marcasAnteriores.isEmpty || _tablero.contadorMovimientos <= marcasAnteriores.first.movimientos) {
+            esNuevoRecord = true;
+          }
+
           final nuevoPuntaje = EntradaPuntaje(
             tiempoSegundos: _segundos,
             movimientos: _tablero.contadorMovimientos,
@@ -95,9 +114,8 @@ class _VistaJuegoState extends State<VistaJuego> {
         } catch (_) {}
 
         if (!mounted) return;
-        _mostrarPantallaVictoria();
+        _mostrarPantallaVictoria(esNuevoRecord);
       } 
-      // Verificar Derrota por exceder límite de movimientos
       else if (_tablero.contadorMovimientos >= _limiteMovimientos) {
         _timer?.cancel();
         _mostrarPantallaDerrota();
@@ -105,26 +123,30 @@ class _VistaJuegoState extends State<VistaJuego> {
     }
   }
 
-  // 🏆 Pantalla de Victoria
-  void _mostrarPantallaVictoria() {
+  void _mostrarPantallaVictoria(bool esNuevoRecord) {
+    final modo = AjustesView.modoTemaNotifier.value;
+    final colorDialogo = modo == ThemeMode.light ? Colors.white : const Color(0xFF2A1B54);
+    final colorTextoDialogo = modo == ThemeMode.light ? const Color(0xFF2D3436) : Colors.white;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF2A1B54),
+        backgroundColor: colorDialogo,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: Color(0xFFFFEAA7), width: 2),
         ),
-        title: const Text(
-          '¡Felicidades! 🎉',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        title: Text(
+          esNuevoRecord ? '¡NUEVO RÉCORD! 🏆🎉' : '¡Felicidades! 🎉',
+          style: TextStyle(color: colorTextoDialogo, fontWeight: FontWeight.bold),
         ),
         content: Text(
           '¡Completaste el puzzle!\n\n'
+          '${esNuevoRecord ? "🌟 ¡Es la mejor marca registrada en este modo!\n\n" : ""}'
           'Movimientos: ${_tablero.contadorMovimientos} / $_limiteMovimientos\n'
           'Tiempo: $_segundos segundos',
-          style: const TextStyle(color: Colors.white70, fontSize: 16),
+          style: TextStyle(color: colorTextoDialogo.withOpacity(0.8), fontSize: 16),
         ),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
@@ -132,9 +154,7 @@ class _VistaJuegoState extends State<VistaJuego> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF7675),
               foregroundColor: const Color(0xFF1E272C),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () {
               Navigator.pop(ctx);
@@ -146,9 +166,7 @@ class _VistaJuegoState extends State<VistaJuego> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF55EFC4),
               foregroundColor: const Color(0xFF1E272C),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () {
               Navigator.pop(ctx);
@@ -161,29 +179,32 @@ class _VistaJuegoState extends State<VistaJuego> {
     );
   }
 
-  // 💀 Pantalla de Derrota
   void _mostrarPantallaDerrota() {
     _timer?.cancel();
     ServicioAudio.reproducirDerrota();
+
+    final modo = AjustesView.modoTemaNotifier.value;
+    final colorDialogo = modo == ThemeMode.light ? Colors.white : const Color(0xFF2A1B54);
+    final colorTextoDialogo = modo == ThemeMode.light ? const Color(0xFF2D3436) : Colors.white;
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF2A1B54),
+        backgroundColor: colorDialogo,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: Color(0xFFFFEAA7), width: 2),
         ),
-        title: const Text(
+        title: Text(
           'Derrota',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: colorTextoDialogo, fontWeight: FontWeight.bold),
         ),
         content: Text(
           'Alcanzaste el límite máximo de movimientos.\n\n'
           'Movimientos: ${_tablero.contadorMovimientos} / $_limiteMovimientos\n'
           'Tiempo transcurrido: $_segundos segundos',
-          style: const TextStyle(color: Colors.white70, fontSize: 16),
+          style: TextStyle(color: colorTextoDialogo.withOpacity(0.8), fontSize: 16),
         ),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
@@ -191,9 +212,7 @@ class _VistaJuegoState extends State<VistaJuego> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFF7675),
               foregroundColor: const Color(0xFF1E272C),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () {
               Navigator.pop(ctx);
@@ -205,9 +224,7 @@ class _VistaJuegoState extends State<VistaJuego> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF55EFC4),
               foregroundColor: const Color(0xFF1E272C),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () {
               Navigator.pop(ctx);
@@ -222,56 +239,51 @@ class _VistaJuegoState extends State<VistaJuego> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color(0xFF3B2874),
-            Color(0xFF6C5CE7),
-            Color(0xFF2A1B54),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.white),
-          title: Text(
-            !_enJuego ? 'Seleccionar Dificultad' : 'Puzzle (${_dificultadSeleccionada.toUpperCase()})',
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AjustesView.modoTemaNotifier,
+      builder: (context, _, __) {
+        final colorTexto = TemaHelper.obtenerColorTexto(context);
+
+        return Container(
+          decoration: TemaHelper.obtenerDecoracionFondo(context),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              iconTheme: IconThemeData(color: colorTexto),
+              title: Text(
+                !_enJuego ? 'Seleccionar Dificultad' : 'Puzzle (${_dificultadSeleccionada.toUpperCase()})',
+                style: TextStyle(fontWeight: FontWeight.bold, color: colorTexto),
+              ),
+              leading: _enJuego
+                  ? IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () {
+                        _timer?.cancel();
+                        setState(() => _enJuego = false);
+                      },
+                    )
+                  : null,
+              actions: _enJuego
+                  ? [
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        tooltip: 'Reiniciar',
+                        onPressed: () => _iniciarPartida(_dificultadSeleccionada),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.flag_outlined),
+                        tooltip: 'Rendirse',
+                        onPressed: _mostrarPantallaDerrota,
+                      )
+                    ]
+                  : null,
+            ),
+            body: !_enJuego ? _buildSeleccionDificultad() : _buildTableroJuego(context),
           ),
-          leading: _enJuego
-              ? IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    _timer?.cancel();
-                    setState(() => _enJuego = false);
-                  },
-                )
-              : null,
-          actions: _enJuego
-              ? [
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    tooltip: 'Reiniciar',
-                    onPressed: () {
-                      _iniciarPartida(_dificultadSeleccionada);
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.flag_outlined),
-                    tooltip: 'Rendirse',
-                    onPressed: _mostrarPantallaDerrota,
-                  )
-                ]
-              : null,
-        ),
-        body: !_enJuego ? _buildSeleccionDificultad() : _buildTableroJuego(),
-      ),
+        );
+      },
     );
   }
 
@@ -308,16 +320,16 @@ class _VistaJuegoState extends State<VistaJuego> {
     );
   }
 
-  Widget _buildTableroJuego() {
+  Widget _buildTableroJuego(BuildContext context) {
     return Column(
       children: [
         const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildStatCard('Movimientos', '${_tablero.contadorMovimientos} / $_limiteMovimientos', Icons.touch_app_rounded),
+            _buildStatCard(context, 'Movimientos', '${_tablero.contadorMovimientos} / $_limiteMovimientos', Icons.touch_app_rounded),
             const SizedBox(width: 16),
-            _buildStatCard('Tiempo', '${_segundos}s', Icons.timer_rounded),
+            _buildStatCard(context, 'Tiempo', '${_segundos}s', Icons.timer_rounded),
           ],
         ),
         const SizedBox(height: 16),
@@ -326,19 +338,16 @@ class _VistaJuegoState extends State<VistaJuego> {
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: 450,
-                  maxHeight: 450,
-                ),
+                constraints: const BoxConstraints(maxWidth: 450, maxHeight: 450),
                 child: AspectRatio(
                   aspectRatio: 1.0,
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.25),
+                      color: TemaHelper.obtenerColorFondoTarjeta(context),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.15),
+                        color: TemaHelper.obtenerColorBorde(context),
                         width: 1.5,
                       ),
                     ),
@@ -352,12 +361,11 @@ class _VistaJuegoState extends State<VistaJuego> {
                       itemCount: _tablero.totalFichas,
                       itemBuilder: (context, index) {
                         int numero = _tablero.fichas[index];
-                        if (numero == 0) {
-                          return const SizedBox.shrink();
-                        }
+                        if (numero == 0) return const SizedBox.shrink();
+
                         return ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFEAA7),
+                            backgroundColor: _obtenerColorPieza(numero),
                             foregroundColor: const Color(0xFF1E272C),
                             elevation: 4,
                             shadowColor: Colors.black38,
@@ -386,13 +394,17 @@ class _VistaJuegoState extends State<VistaJuego> {
     );
   }
 
-  Widget _buildStatCard(String titulo, String valor, IconData icono) {
+  Widget _buildStatCard(BuildContext context, String titulo, String valor, IconData icono) {
+    final colorTexto = TemaHelper.obtenerColorTexto(context);
+    final colorTarjeta = TemaHelper.obtenerColorFondoTarjeta(context);
+    final colorBorde = TemaHelper.obtenerColorBorde(context);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
+        color: colorTarjeta,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: colorBorde),
       ),
       child: Row(
         children: [
@@ -400,11 +412,11 @@ class _VistaJuegoState extends State<VistaJuego> {
           const SizedBox(width: 8),
           Text(
             '$titulo: ',
-            style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w500),
+            style: TextStyle(color: colorTexto.withOpacity(0.7), fontSize: 15, fontWeight: FontWeight.w500),
           ),
           Text(
             valor,
-            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(color: colorTexto, fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ],
       ),

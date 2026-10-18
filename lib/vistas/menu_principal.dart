@@ -2,108 +2,115 @@ import 'package:flutter/material.dart';
 import 'vista_juego.dart';
 import 'puntuaciones.dart';
 import 'ajustes.dart';
+import 'instrucciones.dart';
+import '../servicios/tema_helper.dart';
 
 class MenuPrincipal extends StatelessWidget {
   const MenuPrincipal({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF3B2874), // Morado superior
-              Color(0xFF6C5CE7), // Morado brillante
-              Color(0xFF2A1B54), // Morado oscuro inferior
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Íconos de piezas de rompecabezas de arriba
-            Row(
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AjustesView.modoTemaNotifier,
+      builder: (context, _, __) {
+        final colorTexto = TemaHelper.obtenerColorTexto(context);
+
+        return Scaffold(
+          body: Container(
+            width: double.infinity,
+            decoration: TemaHelper.obtenerDecoracionFondo(context),
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _CajaIcono(
-                  colorFondo: const Color(0xFF00CEC9), // Cian / Turquesa
-                  icon: Icons.extension,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _CajaIcono(
+                      colorFondo: const Color(0xFF00CEC9),
+                      icon: Icons.extension,
+                    ),
+                    const SizedBox(width: 12),
+                    _CajaIcono(
+                      colorFondo: const Color(0xFFE84393),
+                      icon: Icons.extension,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                _CajaIcono(
-                  colorFondo: const Color(0xFFE84393), // Rosado
-                  icon: Icons.extension,
+                const SizedBox(height: 20),
+                Text(
+                  '15 PUZZLE',
+                  style: TextStyle(
+                    fontSize: 28,
+                    color: colorTexto,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 36),
+
+                // Botón JUGAR
+                _BotonMenuEspecial(
+                  label: 'JUGAR',
+                  icon: Icons.play_arrow_rounded,
+                  colorFondo: const Color(0xFF55EFC4),
+                  colorTexto: const Color(0xFF1E272C),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const VistaJuego()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                // Botón PUNTUACIONES
+                _BotonMenuEspecial(
+                  label: 'PUNTUACIONES',
+                  icon: Icons.emoji_events_rounded,
+                  colorFondo: const Color(0xFFFFEAA7),
+                  colorTexto: const Color(0xFF1E272C),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PuntuacionesView()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                // Botón INSTRUCCIONES
+                _BotonMenuEspecial(
+                  label: 'INSTRUCCIONES',
+                  icon: Icons.help_outline_rounded,
+                  colorFondo: const Color(0xFF74B9FF),
+                  colorTexto: const Color(0xFF1E272C),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const InstruccionesView()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                // Botón AJUSTES
+                _BotonMenuEspecial(
+                  label: 'AJUSTES',
+                  icon: Icons.settings_rounded,
+                  colorFondo: const Color(0xFFFF7675),
+                  colorTexto: Colors.white,
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AjustesView()),
+                    );
+                  },
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            const Text(
-              '15 PUZZLE',
-              style: TextStyle(
-                fontSize: 28,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
-              ),
-            ),
-            const SizedBox(height: 40),
-
-            // Botón JUGAR (Verde Neón)
-            _BotonMenuEspecial(
-              label: 'JUGAR',
-              icon: Icons.play_arrow_rounded,
-              colorFondo: const Color(0xFF55EFC4),
-              colorTexto: const Color(0xFF1E272C),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const VistaJuego(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Botón PUNTUACIONES (Amarillo Neón)
-            _BotonMenuEspecial(
-              label: 'PUNTUACIONES',
-              icon: Icons.emoji_events_rounded,
-              colorFondo: const Color(0xFFFFEAA7),
-              colorTexto: const Color(0xFF1E272C),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const PuntuacionesView(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Botón AJUSTES (Rosado Neón)
-            _BotonMenuEspecial(
-              label: 'AJUSTES',
-              icon: Icons.settings_rounded,
-              colorFondo: const Color(0xFFFF7675),
-              colorTexto: Colors.white,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const AjustesView(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
