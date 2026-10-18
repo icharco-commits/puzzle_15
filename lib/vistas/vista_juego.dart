@@ -17,10 +17,17 @@ class _VistaJuegoState extends State<VistaJuego> {
   late Tablero _tablero;
   int _segundos = 0;
   Timer? _timer;
-  String _dificultadSeleccionada = 'medio';
-  bool _enJuego = false;
+  late String _dificultadSeleccionada;
   int _limiteMovimientos = 500;
   bool _primerMovimientoHecho = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Obtiene automáticamente la dificultad configurada desde los Ajustes
+    _dificultadSeleccionada = AjustesView.dificultadNotifier.value;
+    _iniciarPartida(_dificultadSeleccionada);
+  }
 
   void _iniciarPartida(String dificultad) {
     int filas = 4;
@@ -49,7 +56,6 @@ class _VistaJuegoState extends State<VistaJuego> {
       _tablero = Tablero(filas: filas, columnas: columnas);
       _segundos = 0;
       _primerMovimientoHecho = false;
-      _enJuego = true;
     });
   }
 
@@ -138,15 +144,15 @@ class _VistaJuegoState extends State<VistaJuego> {
           side: const BorderSide(color: Color(0xFFFFEAA7), width: 2),
         ),
         title: Text(
-          esNuevoRecord ? '¡NUEVO RÉCORD! 🏆🎉' : '¡Felicidades! 🎉',
+          esNuevoRecord ? '¡NUEVO RÉCORD!' : '¡Felicidades!',
           style: TextStyle(color: colorTextoDialogo, fontWeight: FontWeight.bold),
         ),
         content: Text(
           '¡Completaste el puzzle!\n\n'
-          '${esNuevoRecord ? "🌟 ¡Es la mejor marca registrada en este modo!\n\n" : ""}'
+          '${esNuevoRecord ? "¡Es la mejor marca registrada en este modo!\n\n" : ""}'
           'Movimientos: ${_tablero.contadorMovimientos} / $_limiteMovimientos\n'
           'Tiempo: $_segundos segundos',
-          style: TextStyle(color: colorTextoDialogo.withOpacity(0.8), fontSize: 16),
+          style: TextStyle(color: colorTextoDialogo.withValues(alpha: 0.8), fontSize: 16),
         ),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
@@ -204,7 +210,7 @@ class _VistaJuegoState extends State<VistaJuego> {
           'Alcanzaste el límite máximo de movimientos.\n\n'
           'Movimientos: ${_tablero.contadorMovimientos} / $_limiteMovimientos\n'
           'Tiempo transcurrido: $_segundos segundos',
-          style: TextStyle(color: colorTextoDialogo.withOpacity(0.8), fontSize: 16),
+          style: TextStyle(color: colorTextoDialogo.withValues(alpha: 0.8), fontSize: 16),
         ),
         actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
@@ -253,144 +259,139 @@ class _VistaJuegoState extends State<VistaJuego> {
               elevation: 0,
               iconTheme: IconThemeData(color: colorTexto),
               title: Text(
-                !_enJuego ? 'Seleccionar Dificultad' : 'Puzzle (${_dificultadSeleccionada.toUpperCase()})',
+                'Puzzle (${_dificultadSeleccionada.toUpperCase()})',
                 style: TextStyle(fontWeight: FontWeight.bold, color: colorTexto),
               ),
-              leading: _enJuego
-                  ? IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () {
-                        _timer?.cancel();
-                        setState(() => _enJuego = false);
-                      },
-                    )
-                  : null,
-              actions: _enJuego
-                  ? [
-                      IconButton(
-                        icon: const Icon(Icons.refresh),
-                        tooltip: 'Reiniciar',
-                        onPressed: () => _iniciarPartida(_dificultadSeleccionada),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.flag_outlined),
-                        tooltip: 'Rendirse',
-                        onPressed: _mostrarPantallaDerrota,
-                      )
-                    ]
-                  : null,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  _timer?.cancel();
+                  Navigator.pop(context);
+                },
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.flag_outlined),
+                  tooltip: 'Rendirse',
+                  onPressed: _mostrarPantallaDerrota,
+                ),
+              ],
             ),
-            body: !_enJuego ? _buildSeleccionDificultad() : _buildTableroJuego(context),
+            body: _buildTableroJuego(context),
           ),
         );
       },
     );
   }
 
-  Widget _buildSeleccionDificultad() {
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _cuadritoDificultad(
-                titulo: 'Fácil (3x3) - Máx. 300 mov.',
-                color: const Color(0xFF55EFC4),
-                onTap: () => _iniciarPartida('facil'),
-              ),
-              const SizedBox(height: 16),
-              _cuadritoDificultad(
-                titulo: 'Medio (4x4) - Máx. 500 mov.',
-                color: const Color(0xFFFFEAA7),
-                onTap: () => _iniciarPartida('medio'),
-              ),
-              const SizedBox(height: 16),
-              _cuadritoDificultad(
-                titulo: 'Difícil (5x5) - Máx. 700 mov.',
-                color: const Color(0xFFFF7675),
-                onTap: () => _iniciarPartida('dificil'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
+  // DISEÑO CENTRALIZADO RESPONSIVO (ESTADÍSTICAS ARRIBA, TABLERO AL CENTRO)
   Widget _buildTableroJuego(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildStatCard(context, 'Movimientos', '${_tablero.contadorMovimientos} / $_limiteMovimientos', Icons.touch_app_rounded),
-            const SizedBox(width: 16),
-            _buildStatCard(context, 'Tiempo', '${_segundos}s', Icons.timer_rounded),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Expanded(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 450, maxHeight: 450),
-                child: AspectRatio(
-                  aspectRatio: 1.0,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: TemaHelper.obtenerColorFondoTarjeta(context),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: TemaHelper.obtenerColorBorde(context),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: GridView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: _tablero.columnas,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                      ),
-                      itemCount: _tablero.totalFichas,
-                      itemBuilder: (context, index) {
-                        int numero = _tablero.fichas[index];
-                        if (numero == 0) return const SizedBox.shrink();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double alturaDisponible = constraints.maxHeight;
+        final double tamanoTablero = (alturaDisponible * 0.55).clamp(240.0, 460.0);
 
-                        return ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _obtenerColorPieza(numero),
-                            foregroundColor: const Color(0xFF1E272C),
-                            elevation: 4,
-                            shadowColor: Colors.black38,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () => _onFichaTap(index),
-                          child: Text(
-                            '$numero',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        );
-                      },
+        Widget tarjetasEstadisticas = Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 10,
+          children: [
+            _buildStatCard(
+              context, 
+              'Movimientos', 
+              '${_tablero.contadorMovimientos} / $_limiteMovimientos', 
+              Icons.touch_app_rounded
+            ),
+            _buildStatCard(
+              context, 
+              'Tiempo', 
+              '${_segundos}s', 
+              Icons.timer_rounded
+            ),
+          ],
+        );
+
+        Widget contenedorTablero = SizedBox(
+          width: tamanoTablero,
+          height: tamanoTablero,
+          child: Container(
+            padding: EdgeInsets.all(constraints.maxWidth < 360 ? 8 : 12),
+            decoration: BoxDecoration(
+              color: TemaHelper.obtenerColorFondoTarjeta(context),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: TemaHelper.obtenerColorBorde(context),
+                width: 1.5,
+              ),
+            ),
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: _tablero.columnas,
+                crossAxisSpacing: constraints.maxWidth < 360 ? 5 : 8,
+                mainAxisSpacing: constraints.maxWidth < 360 ? 5 : 8,
+              ),
+              itemCount: _tablero.totalFichas,
+              itemBuilder: (context, index) {
+                int numero = _tablero.fichas[index];
+                if (numero == 0) return const SizedBox.shrink();
+
+                final double tamanoFuente = tamanoTablero / (_tablero.columnas * 3.6);
+
+                return ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _obtenerColorPieza(numero),
+                    foregroundColor: const Color(0xFF1E272C),
+                    elevation: 4,
+                    shadowColor: Colors.black38,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                ),
+                  onPressed: () => _onFichaTap(index),
+                  child: Text(
+                    '$numero',
+                    style: TextStyle(
+                      fontSize: tamanoFuente.clamp(14.0, 32.0),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+
+        return SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  tarjetasEstadisticas,
+                  const SizedBox(height: 18),
+                  contenedorTablero,
+                  const SizedBox(height: 18),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF55EFC4),
+                      foregroundColor: const Color(0xFF1E272C),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    onPressed: () => _iniciarPartida(_dificultadSeleccionada),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Reiniciar Partida', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ),
             ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -400,47 +401,26 @@ class _VistaJuegoState extends State<VistaJuego> {
     final colorBorde = TemaHelper.obtenerColorBorde(context);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: colorTarjeta,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: colorBorde),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icono, color: const Color(0xFF55EFC4), size: 20),
           const SizedBox(width: 8),
           Text(
             '$titulo: ',
-            style: TextStyle(color: colorTexto.withOpacity(0.7), fontSize: 15, fontWeight: FontWeight.w500),
+            style: TextStyle(color: colorTexto.withValues(alpha: 0.7), fontSize: 14, fontWeight: FontWeight.w500),
           ),
           Text(
             valor,
-            style: TextStyle(color: colorTexto, fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(color: colorTexto, fontSize: 15, fontWeight: FontWeight.bold),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _cuadritoDificultad({required String titulo, required Color color, required VoidCallback onTap}) {
-    return SizedBox(
-      width: double.infinity,
-      height: 58,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color.withOpacity(0.2),
-          foregroundColor: Colors.white,
-          side: BorderSide(color: color, width: 2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        onPressed: onTap,
-        child: Text(
-          titulo,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
-        ),
       ),
     );
   }

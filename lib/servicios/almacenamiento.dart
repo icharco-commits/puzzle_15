@@ -42,8 +42,17 @@ class Almacenamiento {
     List<EntradaPuntaje> lista = await obtenerPuntajes(dificultad);
     lista.add(nuevoPuntaje);
     
-    // Ordenar por menor cantidad de movimientos
-    lista.sort((a, b) => a.movimientos.compareTo(b.movimientos));
+    // 1. Ordenar por menor cantidad de movimientos; si empatan, desempatar por menor tiempo
+    lista.sort((a, b) {
+      int comparacionMovimientos = a.movimientos.compareTo(b.movimientos);
+      if (comparacionMovimientos != 0) return comparacionMovimientos;
+      return a.tiempoSegundos.compareTo(b.tiempoSegundos);
+    });
+
+    // 2. Conservar únicamente los 10 mejores puntajes
+    if (lista.length > 10) {
+      lista = lista.sublist(0, 10);
+    }
 
     final String encoded = jsonEncode(lista.map((e) => e.toJson()).toList());
     await prefs.setString('puntajes_$dificultad', encoded);

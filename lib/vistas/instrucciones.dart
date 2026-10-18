@@ -56,17 +56,20 @@ class InstruccionesView extends StatelessWidget {
                             '1. Objetivo del juego:\n'
                             'Ordena todas las fichas en orden numérico ascendente (1, 2, 3...) de izquierda a derecha y de arriba a abajo, dejando la casilla vacía en la última posición.\n\n'
                             '2. Movimiento de fichas:\n'
-                            'Toca cualquier ficha que esté directamente al lado (arriba, abajo, izquierda o derecha) de la casilla vacía para moverla hacia ese espacio.\n\n'
-                            '3. Límites de movimientos:\n'
+                            'Toca cualquier ficha que esté directamente al lado (arriba, abajo, izquierda o derecha) de la casilla vacía para deslizarla hacia ese espacio.\n\n'
+                            '3. Condición de Victoria:\n'
+                            'Ganas inmediatamente cuando logras ordenar todas las fichas correctamente antes de consumir tus movimientos.\n\n'
+                            '4. Condición de Derrota y Límites:\n'
+                            'Pierdes la partida si alcanzas el límite máximo de movimientos permitidos para la dificultad seleccionada:\n'
                             '• Fácil (3x3): Máximo 300 movimientos.\n'
                             '• Medio (4x4): Máximo 500 movimientos.\n'
                             '• Difícil (5x5): Máximo 700 movimientos.\n\n'
-                            '4. Puntuaciones y Récords:\n'
+                            '5. Puntuaciones y Récords:\n'
                             'Tus mejores marcas en tiempo y movimientos se guardarán automáticamente en la sección de Puntuaciones.',
                             style: TextStyle(
                               fontSize: 15,
                               height: 1.5,
-                              color: colorTexto.withOpacity(0.85),
+                              color: colorTexto.withValues(alpha: 0.85),
                             ),
                           ),
                         ],

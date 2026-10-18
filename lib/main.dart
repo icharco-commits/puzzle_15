@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'vistas/pantalla_carga.dart'; 
 import 'vistas/ajustes.dart';
-import 'servicios/servicio_audio.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  ServicioAudio.iniciarMusicaFondo();
+  
+  // Carga de preferencias guardadas (tema, sonido, estilo de fichas)
+  await AjustesView.cargarPreferenciasGuardadas();
+  
   runApp(const MiAppPuzzle());
 }
 
@@ -21,6 +23,8 @@ class MiAppPuzzle extends StatelessWidget {
           title: '15 Puzzle',
           debugShowCheckedModeBanner: false,
           themeMode: modoTema,
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
           home: const PantallaCarga(), 
         );
       },

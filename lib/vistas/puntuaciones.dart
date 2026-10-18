@@ -49,7 +49,7 @@ class _PuntuacionesViewState extends State<PuntuacionesView> {
         ),
         content: Text(
           '¿Estás seguro de que deseas eliminar las puntuaciones de esta dificultad?',
-          style: TextStyle(color: colorTextoDialogo.withOpacity(0.8)),
+          style: TextStyle(color: colorTextoDialogo.withValues(alpha: 0.8)),
         ),
         actions: [
           TextButton(
@@ -123,7 +123,7 @@ class _PuntuacionesViewState extends State<PuntuacionesView> {
                           ? Center(
                               child: Text(
                                 'No hay marcas en esta dificultad',
-                                style: TextStyle(color: colorTexto.withOpacity(0.6), fontSize: 16),
+                                style: TextStyle(color: colorTexto.withValues(alpha: 0.6), fontSize: 16),
                               ),
                             )
                           : ListView.builder(
@@ -167,7 +167,7 @@ class _PuntuacionesViewState extends State<PuntuacionesView> {
                                               Text(
                                                 'Tiempo: ${p.tiempoSegundos}s',
                                                 style: TextStyle(
-                                                  color: colorTexto.withOpacity(0.7),
+                                                  color: colorTexto.withValues(alpha: 0.7),
                                                   fontSize: 14,
                                                 ),
                                               ),
@@ -178,7 +178,7 @@ class _PuntuacionesViewState extends State<PuntuacionesView> {
                                       Text(
                                         p.fecha,
                                         style: TextStyle(
-                                          color: colorTexto.withOpacity(0.5),
+                                          color: colorTexto.withValues(alpha: 0.5),
                                           fontSize: 13,
                                         ),
                                       ),
@@ -208,7 +208,7 @@ class _PuntuacionesViewState extends State<PuntuacionesView> {
       ),
       selected: seleccionado,
       selectedColor: color,
-      backgroundColor: color.withOpacity(0.15),
+      backgroundColor: color.withValues(alpha: 0.15),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: color),
